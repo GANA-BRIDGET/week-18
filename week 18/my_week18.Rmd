@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r packages, include = FALSE}
+library(readxl)
+library(tidyverse)
+library(scales)
+
+ANIMAUX = read_xlsx("~/week18_dallas_animals.xlsx", sheet = "simple") 
+```
+
+
+```{r ANIMAL COUNT} 
+COUNTS = ANIMAUX%>%
+  mutate(animals = fct_recode(animal_type,
+                              "Other" = "BIRD" ,
+                              "CAT" = "CAT",
+                              "DOG" = "DOG",
+                              "Other" = "LIVESTOCK",
+                              "Other" = "WILDLIFE"))%>%
+  count(animals, sort = TRUE)%>%
+  mutate(animals = str_to_title(animals))
+
+blank_theme <- theme_minimal()+
+  theme( axis.title.x = element_blank(), axis.title.y = element_blank(), 
+         axis.text.x=element_blank(), panel.border = element_blank(),
+         panel.grid=element_blank(), axis.ticks = element_blank(), 
+         plot.title=element_text(size=12, face="bold") )
+
+ ggplot(COUNTS, aes(x="", y = n, fill=animals)) + 
+   geom_bar(width = 1, stat = "identity") +
+   coord_polar("y", start=0) +
+   scale_fill_manual(values=c("#999900", "#E69F00", "#56B4E9")) + 
+   blank_theme + 
+   geom_text(aes(y = n/4 + c(0, cumsum(n)[-length(n)]),label = percent(n/sum(n))), size=4) +
+   labs(title = "DALLAS ANIMAL SHELTER", subtitle = "Which Animal Type Strays Most Often? \nDogs, Cats OR Other (Birds, Wildlife and Livestock)")
+ ggsave("Animal-Type Count.png")
+```
+
+
+```{r WHERE THE DOGS ARE USUALLY FOUND}
+DOGS_ORIGIN = ANIMAUX %>%
+   filter(animal_type == "DOG")%>%
+   count(animal_origin, sort = TRUE )
+   
+ORIGIN_PLOT = ggplot(data=DOGS_ORIGIN, aes(x=reorder(animal_origin,n), y = n,group=1))    +geom_line( color = "steelblue", size = 2)+ 
+   geom_point(color = "yellow" , size = 3)+
+   geom_text(aes(label = n) , size = 5 , color = "red")+
+   theme(plot.title=element_text(size=12, face="bold"))+ theme_minimal()+
+   labs(y = "Number of Dogs" , x ="Animal origin" ,title = "DALLAS ANIMAL SHELTER", subtitle = "TOTAL COUNT OF DOGS PER ORIGIN \nToo Many Stray Dogs on The Field") 
+ 
+ggsave("Dogs_Origin.png")
+```
+
+
+```{r THE OUTCOME OFF THE DOGS THAT COME TO THE SHELTER}
+DOGS_OUTCOME = ANIMAUX %>%
+  filter(animal_type == "DOG") %>% 
+  count(outcome_type, sort = TRUE)%>% 
+  mutate(outcome_type = str_to_title(outcome_type))
+
+
+Outcomes_plot = ggplot(DOGS_OUTCOME , aes(x = reorder(outcome_type,n), y = n, label = n)) + geom_col(fill = "brown")+ theme_bw() + 
+  coord_flip() +  geom_label() + 
+  theme(plot.title=element_text(size=12, face="bold"))+
+labs(x = "Outcome Type", y = "Total", title = "DALLAS ANIMAL SHELTER" , subtitle = "Total Count[Outcome Type] For Dogs in Dallas Animal Shelter")
+  
+ggsave("Outcome_Types_for_Dogs.png")
+```
+
